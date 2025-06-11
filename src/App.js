@@ -201,6 +201,116 @@ const mockData = {
   ]
 };
 
+// Login Screen Component
+const LoginScreen = ({ onLogin, loginForm, setLoginForm, loginError, loading }) => (
+  <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-900 to-blue-700">
+    <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-2xl">
+      <div className="mb-8 text-center">
+        <Shield className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+        <h1 className="text-2xl font-bold text-gray-900">Vehicle Management</h1>
+        <p className="text-gray-600">Manager Login</p>
+      </div>
+      
+      <form onSubmit={onLogin}>
+        {loginError && (
+          <div className="px-4 py-3 mb-4 text-red-700 bg-red-100 border border-red-400 rounded">
+            {loginError}
+          </div>
+        )}
+        
+        <div className="mb-4">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>
+          <input
+            type="email"
+            value={loginForm.email}
+            onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your email"
+            required
+            disabled={loading}
+          />
+        </div>
+        
+        <div className="mb-6">
+          <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
+          <input
+            type="password"
+            value={loginForm.password}
+            onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your password"
+            required
+            disabled={loading}
+          />
+        </div>
+        
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full px-4 py-3 font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Signing In...' : 'Sign In'}
+        </button>
+      </form>
+      
+      <div className="mt-6 text-sm text-center text-gray-600">
+        <p>Demo Credentials:</p>
+        <p>john@company.com / admin123</p>
+        <p>sarah@company.com / manager456</p>
+      </div>
+    </div>
+  </div>
+);
+
+// Modal Component
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="w-full max-w-md p-6 overflow-y-auto bg-white rounded-lg max-h-96">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button onClick={onClose} className="text-xl text-gray-400 hover:text-gray-600">
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Form Field Component - Fixed
+const FormField = ({ label, type = 'text', value, onChange, options = [], required = false }) => (
+  <div className="mb-4">
+    <label className="block mb-2 text-sm font-medium text-gray-700">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    {type === 'select' ? (
+      <select
+        value={value || ''}
+        onChange={onChange}
+        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        required={required}
+      >
+        <option value="">Select {label}</option>
+        {options.map((option, index) => (
+          <option key={index} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+    ) : (
+      <input
+        type={type}
+        value={value || ''}
+        onChange={onChange}
+        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        required={required}
+      />
+    )}
+  </div>
+);
+
 const Dashboard = () => {
   // Basic state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -220,7 +330,6 @@ const Dashboard = () => {
   // Real-time state
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [deviceSimulations, setDeviceSimulations] = useState(new Map());
   const websocketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
@@ -245,7 +354,7 @@ const Dashboard = () => {
     return 'normal';
   };
 
-  // Login function
+  // Login function - Fixed
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -294,6 +403,7 @@ const Dashboard = () => {
     setCurrentUser(null);
     setIsLoggedIn(false);
     setActiveTab('overview');
+    setData({ vehicles: [], devices: [], alarms: [] });
     localStorage.removeItem('authToken');
     if (websocketRef.current) {
       websocketRef.current.close();
@@ -412,7 +522,7 @@ const Dashboard = () => {
             }
           : device
       ),
-      alarms: new_alarms.length > 0 
+      alarms: new_alarms && new_alarms.length > 0 
         ? [...new_alarms.map(alarm => ({
             ...alarm,
             alarm_id: Date.now() + Math.random(),
@@ -429,7 +539,6 @@ const Dashboard = () => {
   };
 
   const handleNewAlarm = (message) => {
-    // Handle new alarm message
     console.log('New alarm received:', message);
   };
 
@@ -476,6 +585,15 @@ const Dashboard = () => {
     setFormData({});
   };
 
+  // Fixed form change handler
+  const handleFormChange = (field, value) => {
+    setFormData(prevFormData => ({
+      ...prevFormData,
+      [field]: value
+    }));
+  };
+
+  // Fixed form submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -493,7 +611,7 @@ const Dashboard = () => {
             break;
           default:
             console.log('Add operation not implemented for', activeTab);
-            return;
+            break;
         }
       } else if (modalType === 'edit') {
         switch (activeTab) {
@@ -502,7 +620,7 @@ const Dashboard = () => {
             break;
           default:
             console.log('Edit operation not implemented for', activeTab);
-            return;
+            break;
         }
       }
       
@@ -552,13 +670,95 @@ const Dashboard = () => {
       setError('');
     } catch (error) {
       setError(`Failed to update device assignment: ${error.message}`);
+      // Update local state for offline mode
+      setData(prevData => ({
+        ...prevData,
+        devices: prevData.devices.map(device => 
+          device.device_id === deviceId 
+            ? { 
+                ...device, 
+                vehicle_id: vehicleId === 'unassign' ? null : parseInt(vehicleId),
+                status: vehicleId === 'unassign' ? 'Unassigned' : 'Active',
+                installed_at: vehicleId === 'unassign' ? null : new Date().toISOString().split('T')[0]
+              }
+            : device
+        )
+      }));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFormChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+  const handleResolveAlarm = async (alarmId) => {
+    try {
+      // Update local state immediately
+      setData(prevData => ({
+        ...prevData,
+        alarms: prevData.alarms.map(alarm => 
+          alarm.alarm_id === alarmId 
+            ? { ...alarm, resolved: true }
+            : alarm
+        )
+      }));
+
+      // Try API call
+      await apiService.resolveAlarm(alarmId, currentUser.manager_id);
+    } catch (error) {
+      console.error('Failed to resolve alarm:', error);
+      // Revert local state if API fails
+      setData(prevData => ({
+        ...prevData,
+        alarms: prevData.alarms.map(alarm => 
+          alarm.alarm_id === alarmId 
+            ? { ...alarm, resolved: false }
+            : alarm
+        )
+      }));
+    }
+  };
+
+  // Device simulation function
+  const startDeviceSimulation = async (deviceId, scenario = 'normal') => {
+    try {
+      const simulatedData = {
+        collision: { collision_detected: true, acceleration: 5.2 },
+        drowsiness: { drowsiness_level: 85, rash_driving: false },
+        rash_driving: { rash_driving: true, acceleration: 4.1 },
+        normal: { collision_detected: false, drowsiness_level: 5, rash_driving: false, acceleration: 1.0 }
+      };
+
+      const update = simulatedData[scenario] || simulatedData.normal;
+      
+      // Update local state immediately
+      setData(prevData => ({
+        ...prevData,
+        devices: prevData.devices.map(device => 
+          device.device_id === deviceId 
+            ? { 
+                ...device, 
+                ...update,
+                last_updated: new Date().toISOString()
+              }
+            : device
+        )
+      }));
+
+      // Show notification
+      if (scenario !== 'normal') {
+        showCriticalNotification(deviceId, update);
+      }
+
+      setNotifications(prev => [{
+        id: Date.now(),
+        type: 'info',
+        title: 'Device Simulation',
+        message: `Simulated ${scenario} scenario for device ${deviceId}`,
+        timestamp: new Date().toISOString()
+      }, ...prev.slice(0, 9)]);
+
+    } catch (error) {
+      console.error('Simulation failed:', error);
+    }
   };
 
   // Connection status component
@@ -677,65 +877,6 @@ const Dashboard = () => {
     );
   };
 
-  // Login Screen Component
-  const LoginScreen = () => (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-900 to-blue-700">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-2xl">
-        <div className="mb-8 text-center">
-          <Shield className="w-16 h-16 mx-auto mb-4 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Vehicle Management</h1>
-          <p className="text-gray-600">Manager Login</p>
-        </div>
-        
-        <form onSubmit={handleLogin}>
-          {loginError && (
-            <div className="px-4 py-3 mb-4 text-red-700 bg-red-100 border border-red-400 rounded">
-              {loginError}
-            </div>
-          )}
-          
-          <div className="mb-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={loginForm.email}
-              onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-          
-          <div className="mb-6">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full px-4 py-3 font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
-        
-        <div className="mt-6 text-sm text-center text-gray-600">
-          <p>Demo Credentials:</p>
-          <p>john@company.com / admin123</p>
-          <p>sarah@company.com / manager456</p>
-        </div>
-      </div>
-    </div>
-  );
-
   const StatCard = ({ title, value, icon: Icon, color }) => (
     <div className="p-6 bg-white border-l-4 rounded-lg shadow-md" style={{ borderLeftColor: color }}>
       <div className="flex items-center justify-between">
@@ -755,7 +896,8 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button
             onClick={() => onAdd()}
-            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            disabled={loading}
           >
             <Plus className="w-4 h-4" />
             Add New
@@ -777,31 +919,41 @@ const Dashboard = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {rows.map((row, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                {Object.values(row).map((cell, cellIndex) => (
-                  <td key={cellIndex} className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
-                    {cell}
-                  </td>
-                ))}
-                <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onEdit(row)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(Object.values(row)[0])}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={headers.length + 1} className="px-6 py-8 text-center text-gray-500">
+                  {loading ? 'Loading...' : 'No data available'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((row, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  {Object.values(row).map((cell, cellIndex) => (
+                    <td key={cellIndex} className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                      {cell}
+                    </td>
+                  ))}
+                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onEdit(row)}
+                        className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(Object.values(row)[0])}
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -846,6 +998,7 @@ const Dashboard = () => {
                         }}
                         className="flex-1 p-2 text-sm border border-gray-300 rounded"
                         defaultValue=""
+                        disabled={loading}
                       >
                         <option value="">Select Vehicle</option>
                         {data.vehicles.map((vehicle) => (
@@ -858,7 +1011,9 @@ const Dashboard = () => {
                   </div>
                 ))}
                 {data.devices.filter(device => !device.vehicle_id).length === 0 && (
-                  <p className="py-8 text-center text-gray-500">No unassigned devices available</p>
+                  <p className="py-8 text-center text-gray-500">
+                    {loading ? 'Loading...' : 'No unassigned devices available'}
+                  </p>
                 )}
               </div>
             </div>
@@ -891,7 +1046,8 @@ const Dashboard = () => {
                               </div>
                               <button
                                 onClick={() => handleDeviceAssignment(device.device_id, 'unassign')}
-                                className="text-sm text-red-600 hover:text-red-800"
+                                className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                                disabled={loading}
                               >
                                 Unassign
                               </button>
@@ -931,49 +1087,6 @@ const Dashboard = () => {
           color="#F59E0B" 
         />
       </div>
-    </div>
-  );
-
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div className="w-full max-w-md p-6 overflow-y-auto bg-white rounded-lg max-h-96">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <button onClick={onClose} className="text-xl text-gray-400 hover:text-gray-600">
-              ×
-            </button>
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
-  const FormField = ({ label, type = 'text', value, onChange, options = [] }) => (
-    <div className="mb-4">
-      <label className="block mb-2 text-sm font-medium text-gray-700">{label}</label>
-      {type === 'select' ? (
-        <select
-          value={value}
-          onChange={onChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="">Select {label}</option>
-          {options.map((option, index) => (
-            <option key={index} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-      ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={onChange}
-          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      )}
     </div>
   );
 
@@ -1083,12 +1196,14 @@ const Dashboard = () => {
                   <button
                     onClick={() => startDeviceSimulation(device.device_id, 'collision')}
                     className="px-2 py-1 text-xs text-red-700 bg-red-100 rounded hover:bg-red-200"
+                    disabled={loading}
                   >
                     Test Collision
                   </button>
                   <button
                     onClick={() => startDeviceSimulation(device.device_id, 'drowsiness')}
                     className="px-2 py-1 text-xs text-orange-700 bg-orange-100 rounded hover:bg-orange-200"
+                    disabled={loading}
                   >
                     Test Drowsy
                   </button>
@@ -1180,7 +1295,8 @@ const Dashboard = () => {
                         </span>
                         <button
                           onClick={() => handleResolveAlarm(alarm.alarm_id)}
-                          className="px-3 py-1 text-xs text-white bg-green-600 rounded hover:bg-green-700"
+                          className="px-3 py-1 text-xs text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                          disabled={loading}
                         >
                           Resolve
                         </button>
@@ -1200,82 +1316,17 @@ const Dashboard = () => {
     }
   };
 
-  // Device simulation function
-  const startDeviceSimulation = async (deviceId, scenario = 'normal') => {
-    try {
-      // Simulate the effect locally for immediate feedback
-      const simulatedData = {
-        collision: { collision_detected: true, acceleration: 5.2 },
-        drowsiness: { drowsiness_level: 85, rash_driving: false },
-        rash_driving: { rash_driving: true, acceleration: 4.1 },
-        normal: { collision_detected: false, drowsiness_level: 5, rash_driving: false, acceleration: 1.0 }
-      };
-
-      const update = simulatedData[scenario] || simulatedData.normal;
-      
-      // Update local state immediately
-      setData(prevData => ({
-        ...prevData,
-        devices: prevData.devices.map(device => 
-          device.device_id === deviceId 
-            ? { 
-                ...device, 
-                ...update,
-                last_updated: new Date().toISOString()
-              }
-            : device
-        )
-      }));
-
-      // Show notification
-      if (scenario !== 'normal') {
-        showCriticalNotification(deviceId, update);
-      }
-
-      setNotifications(prev => [{
-        id: Date.now(),
-        type: 'info',
-        title: 'Device Simulation',
-        message: `Simulated ${scenario} scenario for device ${deviceId}`,
-        timestamp: new Date().toISOString()
-      }, ...prev.slice(0, 9)]);
-
-    } catch (error) {
-      console.error('Simulation failed:', error);
-    }
-  };
-
-  const handleResolveAlarm = async (alarmId) => {
-    try {
-      // Update local state immediately
-      setData(prevData => ({
-        ...prevData,
-        alarms: prevData.alarms.map(alarm => 
-          alarm.alarm_id === alarmId 
-            ? { ...alarm, resolved: true }
-            : alarm
-        )
-      }));
-
-      // Try API call
-      await apiService.resolveAlarm(alarmId, currentUser.manager_id);
-    } catch (error) {
-      console.error('Failed to resolve alarm:', error);
-      // Revert local state if API fails
-      setData(prevData => ({
-        ...prevData,
-        alarms: prevData.alarms.map(alarm => 
-          alarm.alarm_id === alarmId 
-            ? { ...alarm, resolved: false }
-            : alarm
-        )
-      }));
-    }
-  };
-
   // Show login screen if not logged in
   if (!isLoggedIn) {
-    return <LoginScreen />;
+    return (
+      <LoginScreen 
+        onLogin={handleLogin}
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        loginError={loginError}
+        loading={loading}
+      />
+    );
   }
 
   return (
@@ -1381,21 +1432,33 @@ const Dashboard = () => {
                 label="Manufacturer" 
                 value={formData.manufacturer || ''} 
                 onChange={(e) => handleFormChange('manufacturer', e.target.value)} 
+                required
               />
               <FormField 
                 label="Model" 
                 value={formData.model || ''} 
                 onChange={(e) => handleFormChange('model', e.target.value)} 
+                required
               />
               <FormField 
                 label="Vehicle Number" 
                 value={formData.vehicle_number || ''} 
                 onChange={(e) => handleFormChange('vehicle_number', e.target.value)} 
+                required
               />
               <FormField 
                 label="Vehicle Type" 
+                type="select"
                 value={formData.vehicle_type || ''} 
                 onChange={(e) => handleFormChange('vehicle_type', e.target.value)} 
+                options={[
+                  { value: 'Sedan', label: 'Sedan' },
+                  { value: 'SUV', label: 'SUV' },
+                  { value: 'Truck', label: 'Truck' },
+                  { value: 'Hatchback', label: 'Hatchback' },
+                  { value: 'Convertible', label: 'Convertible' }
+                ]}
+                required
               />
             </>
           )}
@@ -1404,7 +1467,7 @@ const Dashboard = () => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : modalType === 'add' ? 'Add' : 'Update'}
             </button>
